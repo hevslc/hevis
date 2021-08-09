@@ -6,3 +6,8 @@ plotly
 matplotlib
 nltk
 gensim
+datasets
+transformers
+torch
+scipy
+umap-learn

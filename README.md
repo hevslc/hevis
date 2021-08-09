@@ -10,6 +10,7 @@
 Para abrir o aplicativo, rode o seguinte comando no terminal:
 
 ```bash
+export NODE_OPTIONS="--max-old-space-size=8192"
 pip install requiriments.txt
 streamlit run 170059031_HevelynCarvalho.py
 ```

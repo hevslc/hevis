@@ -2,7 +2,6 @@ import plotly
 import plotly.graph_objs as go
 import plotly.offline as pyo
 import plotly.express as px
-from sklearn.datasets import fetch_20newsgroups
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
@@ -52,3 +51,8 @@ def computeFig(vec_proj, target, labels):
 	with st.spinner('Computing the figure...'):	
 		fig, mapp = Fig(vec_proj, target, labels)	
 	return fig, mapp
+
+def lineChart(x, y, title, xtitle, ytitle):
+	fig = go.Figure(data=go.Scatter(x=x, y=y, mode='lines+markers'))
+	fig.update_layout(title=title, xaxis_title=xtitle, yaxis_title=ytitle)
+	return fig
