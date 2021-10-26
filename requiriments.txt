@@ -6,7 +6,7 @@ plotly
 kaleido
 poppler-utils --install-option='--upgrade'
 matplotlib
-nltk
+nltk --install-option='--upgrade'
 gensim
 datasets
 transformers
