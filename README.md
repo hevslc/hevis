@@ -11,8 +11,10 @@
 * Create a new Python virtual environment for the template:
 ```
 $ cd hevis
-$ python3 -m venv venv  # create venv
-$ cd venv/Scripts/activate   # activate venv
+$ python -m venv venv  # create venv
+$ # activate venv:
+$ . venv/bin/activate # OR
+$ cd venv/Scripts & activate   
 $ pip install -r requiriments.txt # install dependences
 ```
 * Back to hevis directory, initialize and run the component template frontend:
@@ -25,9 +27,12 @@ $ npm run start  # Start the Webpack dev server
 ```
 $ export NODE_OPTIONS="--max-old-space-size=8192"
 ```
-* From a separate terminal, run the template's Streamlit app:
+* From a separate terminal, run the HeVis Streamlit app:
 ```
 $ cd hevis
-$ . venv/bin/activate  # activate the venv you created earlier
+$ . venv/bin/activate # OR
+$ cd venv/Scripts & activate  
 $ streamlit run hevis.py  # run the example server
 ```
+
+* Observation: Downloading .eps files requires installing poopler
