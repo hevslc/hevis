@@ -1,5 +1,5 @@
 
-from sklearn.manifold import MDS, TSNE, Isomap, LocallyLinearEmbedding
+from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding
 from sklearn.decomposition import PCA
 import umap
 import streamlit as st

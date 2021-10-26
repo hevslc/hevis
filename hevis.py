@@ -8,16 +8,14 @@ import glob
 import streamlit as st
 
 
-import auxfuncs as aux
-import vectorization as veclib
-import projection as projlib
-import plotfig as plot_lib
-import classification as clf
+import src.auxfuncs as aux
+import src.vectorization as veclib
+import src.projection as projlib
+import src.plotfig as plotlib
+import src.classification as clf
 
-from streamlit_plotly_events import plotly_events
+from src.streamlit_plotly_events import plotly_events
 
-
-title = "Projection"
 
 st.markdown(
     """
@@ -34,13 +32,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-preprocessedFile = glob.glob("data/preprocessed", recursive = True)
-labels, originalText, ppText, target = aux.default(bool(len(preprocessedFile)))
+# Init
+aux.createtmp()
+labels, originalText, ppText, target = aux.default()
 noesparse = False
 nsamples = len(target)
-
-
 bestneigh = aux.avgAmountLabels(target)
+title = "tf-idf + PCA"
+
+vec_dict = {}
+proj_dict = {}
+vec_dict['method4Doc'] = "average_weighted_frequency"
 
 # Side Bar #######################################################
 
@@ -49,10 +51,6 @@ bestneigh = aux.avgAmountLabels(target)
     #bytes_data = uploaded_file.getvalue() # To read file as bytes
     #st.write(bytes_data)
     
-vec_dict = {}
-proj_dict = {}
-vec_dict['method4Doc'] = "average_weighted_frequency"
-
 
 st.sidebar.markdown("## Word Embeddings")
 wordEmbedding = st.sidebar.selectbox((''), ('tf-idf', 'word2vec', 'bag-of-words', "doc2vec", "BERT", "GloVe"))
@@ -152,12 +150,14 @@ elif projection == "LocallyLinearEmbedding":
     proj_dict['neighbors_algorithm'] = form_proj.selectbox(('neighbors_algorithm'), ('auto', 'brute', 'kd_tree', 'ball_tree'))
     submitted_proj = form_proj.form_submit_button("OK")  
 
-vectorizer, title = veclib.getVectorizer(wordEmbedding, vec_dict, len(np.unique(target)))
-proj, title, noesparse = projlib.getProjection(projection, proj_dict, title)
+vectorizer, newtitle = veclib.getVectorizer(wordEmbedding, vec_dict, len(np.unique(target)))
+proj, newtitle, noesparse = projlib.getProjection(projection, proj_dict, newtitle)
 
-
+if submitted_vec or submitted_proj:
+    title = newtitle
 
 # App ##################################################
+
 #from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 #ectorizer = Doc2Vec(vector_size=vec_dict['vector_size'], window=vec_dict['window'], min_count=vec_dict['min_count'], dm=vec_dict['dm'], hs=vec_dict['hs'], negative=vec_dict['negative'], ns_exponent=vec_dict['ns_exponent'], alpha=vec_dict['alpha'], min_alpha=vec_dict['min_alpha'], sample=vec_dict['sample'], epochs=vec_dict['epochs'], dbow_words=vec_dict['dbow_words'])
 #aggedDocs = [TaggedDocument(doc.split(), np.array([i])) for i, doc in enumerate(ppText)]
@@ -169,30 +169,85 @@ if submitted_vec or submitted_proj:
     vec_time, proj_time = aux.compute(submitted_vec, vectorizer, wordEmbedding, vec_dict['method4Doc'], proj, ppText, target, labels)
     
 
-fig_js, mapp, dataproj, datavec = aux.readData(vectorizer, wordEmbedding, vec_dict['method4Doc'], proj, ppText, target, labels)
-
-
+fig_js, mapp, vec_proj, vec_embedding = aux.readData(vectorizer, wordEmbedding, vec_dict['method4Doc'], proj, ppText, target, labels)
 np.save('tmp/label', target)
 
 st.title('Visualization')
-st.subheader(title)
+st.write(title)
 
-clickedPoint = plotly_events(fig_js, key='scatter')
+vcol1, vcol2 = st.columns([7,1])
+with vcol1:
+    clickedPoint = plotly_events(fig_js, key='scatter')
+with vcol2:
+    st.write("Download")
+    download_png = st.button(".png")
+    download_eps = st.button(".eps", help='must install poopler')
+    download_csv = st.button(".svg")
+#st.download_button("Download .eps", plotlib.getImage(fig_js, "eps"))
+#st.download_button("Download .csv", plotlib.getImage(fig_js, "csv"))
 
-# neighpreservation_list, coefsil = aux.layoutQuality(datavec, dataproj, target)
-# st.write(f'Coeficiente Silhouette: {coefsil:.2f}' )
-# st.plotly_chart(plot_lib.lineChart(list(range(1,31)), neighpreservation_list, "Neighborhood Preservation", "Number Neighbors", "Precision"))
+if(download_png):
+    plotlib.saveImage(fig_js, aux.getFileName(title), "png")
+if(download_eps):
+    plotlib.saveImage(fig_js, aux.getFileName(title), "eps")
+if(download_csv):
+    plotlib.saveImage(fig_js, aux.getFileName(title), "svg")
+    
+
+with st.expander('Click on a point to view the text', False):
+    col1, col2 = st.columns(2)
+    if len(clickedPoint):
+        idx = aux.getTextIdx(mapp, clickedPoint[0]['curveNumber'], clickedPoint[0]['pointIndex'])
+        with col1:
+            st.header("Texto pré-processado")
+            st.write(ppText[idx])
+        with col2:
+            st.header("Texto original")
+            st.text(originalText[idx])
+
+with st.expander('Layout Quality Metrics', False):
+    neighMetric = aux.getTrustworthiness(vec_embedding, vec_proj, 20)
+    silMetric = aux.getSilhouetteCoefficient(vec_proj, target)
+    st.write(f'Coeficiente Silhouette: {silMetric:.2f}')
+    st.write(f'Trustworthiness (Neighborhood Preservation) with 20 neighbours: {neighMetric:.2f}')
+
+    kneigh  = st.slider('k neighbours', 1, 100, 30)
+    submit_lq = st.button(f'Run Trustworthiness in range of {kneigh} neighbours')
+    if submit_lq:
+        neighMetricList = aux.listTrustworthiness(vec_embedding, vec_proj, kneigh)
+        fig = plotlib.lineChart(list(range(1,kneigh+1)), neighMetricList, "Trustworthiness", "Number Neighbors", "Precision")
+        st.plotly_chart(fig)    
+        tcol1, tcol2, tcol3, tcol4 = st.columns(4)
+        with tcol1:
+            st.write("Download")
+        with tcol2:
+            download_trust_png = st.button(".png", key="download_trust_png")
+        with tcol3:
+            download_trust_eps = st.button(".eps", key="download_trust_eps", help='must install poopler')
+        with tcol4:
+            download_trust_csv = st.button(".svg", key="download_trust_csv")  
+        if(download_trust_png):
+            plotlib.saveImage(fig.to_json, aux.getFileName(title), "png")
+        if(download_trust_eps):
+            plotlib.saveImage(fig.to_json, aux.getFileName(title), "eps")
+        if(download_trust_csv):
+            plotlib.saveImage(fig.to_json, aux.getFileName(title), "svg")          
 
 
-# f1score = clf.runSVC(dataproj, target)
-# st.subheader(f'Classification f1-score: {f1score:.2f}')
+with st.expander('Classification', False):
+    f1score = clf.runSVC(vec_proj, target)
+    st.write(f'f1-score: {f1score:.2f}')
 
 
+# all results
+files_vec_proj = glob.glob('tmp/results/vecs_projections/*')
+ncycles = len(files_vec_proj)
+if submitted_vec or submitted_proj or (ncycles == 0):
+    aux.saveResults(title, vec_embedding, vec_proj, neighMetric, silMetric, f1score)
 
-st.subheader('Click on a point to view the text:')
-if len(clickedPoint):
-    idx = aux.getTextIdx(mapp, clickedPoint[0]['curveNumber'], clickedPoint[0]['pointIndex'])
-    with st.beta_expander("Texto pré-processado"):
-        st.write(ppText[idx])
-    with st.beta_expander("Texto original"):
-        st.text(originalText[idx])
+files_vec_proj = glob.glob('tmp/results/vecs_projections/*')
+ncycles = len(files_vec_proj)
+if ncycles > 1:
+    with st.expander('History', False):
+        historyValues = aux.history()
+        plotly_events(historyValues.to_json())

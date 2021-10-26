@@ -1,8 +1,10 @@
-numpy
+numpy==1.20.0
 pandas
 scikit-learn
 streamlit
 plotly
+kaleido
+poppler-utils --install-option='--upgrade'
 matplotlib
 nltk
 gensim
